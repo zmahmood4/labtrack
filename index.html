@@ -67,26 +67,6 @@
     border-radius: 20px; padding: 4px 10px;
   }
 
-  /* ── Status ── */
-  .status {
-    background: var(--surface); border: 0.5px solid var(--border);
-    border-radius: var(--r); padding: 15px 16px;
-    display: flex; align-items: center; gap: 13px;
-    transition: border-color 0.25s;
-  }
-  .status.s-in        { border-color: var(--green-rim); }
-  .status.s-emergency { border-color: var(--red-rim); }
-  .s-dot {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: var(--surface2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0; transition: background 0.25s;
-  }
-  .s-dot.in        { background: var(--green-dim); }
-  .s-dot.emergency { background: var(--red-dim); }
-  .s-text h3 { font-size: 14px; font-weight: 600; }
-  .s-text p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
   /* ── Card ── */
   .card {
     background: var(--surface); border: 0.5px solid var(--border);
@@ -166,22 +146,6 @@
     font-size: 11px;
   }
 
-  /* ── Log ── */
-  .log-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .log-clear { font-size: 11px; color: var(--faint); cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
-  .log-clear:hover { color: var(--muted); }
-  .log-empty { font-size: 13px; color: var(--faint); }
-  .log-row { display: flex; align-items: flex-start; gap: 9px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
-  .log-row:last-child { border-bottom: none; }
-  .badge { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
-  .b-in  { background: var(--green-dim); color: var(--green); }
-  .b-out { background: var(--surface2);  color: var(--muted); }
-  .b-sos { background: var(--red-dim);   color: var(--red); }
-  .log-body { flex: 1; min-width: 0; }
-  .log-who  { font-size: 13px; font-weight: 600; }
-  .log-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .log-time { font-size: 11px; color: var(--faint); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-
   /* ── Toast ── */
   .toast {
     position: fixed;
@@ -199,7 +163,6 @@
   .toast.err  { color: var(--red);   border-color: var(--red-rim); }
   .toast.warn { color: #f5a623;      border-color: rgba(245,166,35,0.3); }
 
-  .delay-note { font-size: 11px; color: var(--faint); text-align: center; line-height: 1.5; }
   .footer     { text-align: center; font-size: 11px; color: var(--faint); padding: 2px 0 6px; }
 </style>
 </head>
@@ -224,15 +187,6 @@
   <div class="config-err" id="config-err">
     ⚠ <strong>Token not injected.</strong> The deploy workflow hasn't run yet, or the <code>GH_DISPATCH_TOKEN</code> secret is missing.<br>
     Go to your repo → <strong>Settings → Secrets → Actions</strong> → add <code>GH_DISPATCH_TOKEN</code>, then push any change to trigger a redeploy.
-  </div>
-
-  <!-- Status -->
-  <div class="status" id="status">
-    <div class="s-dot" id="s-dot"><span id="s-emoji">🏢</span></div>
-    <div class="s-text">
-      <h3 id="s-title">No one checked in</h3>
-      <p  id="s-sub">Select location, enter your name, tap check in</p>
-    </div>
   </div>
 
   <!-- Location -->
@@ -279,15 +233,6 @@
 
   <p class="delay-note">⏱ Slack messages arrive ~30–60s after action via GitHub Actions</p>
 
-  <!-- Log -->
-  <div class="card" style="flex:1">
-    <div class="log-hdr">
-      <div class="card-label" style="margin:0">Today's log</div>
-      <button class="log-clear" onclick="clearLog()">Clear</button>
-    </div>
-    <div id="log"><p class="log-empty">No activity yet today</p></div>
-  </div>
-
   <div class="footer">ev.energy lab safety system</div>
 </div>
 
@@ -302,6 +247,7 @@ const CFG = {
   gh_user:        'zmahmood4',
   gh_repo:        'labtrack',
   manager_handle: '@your-manager',
+  slack_channel2:  '#hardware-connectivity',
   locations: {
     luton:   { label: 'Luton Lab',    flag: '🇬🇧' },
     newyork: { label: 'New York Lab', flag: '🇺🇸' },
@@ -311,9 +257,8 @@ const CFG = {
 // Replaced by deploy.yml via sed — do not edit this line
 const ghToken = '__GH_DISPATCH_TOKEN__';
 
-let loc     = 'luton';
-let entries = [];
-let toastT  = null;
+let loc    = 'luton';
+let toastT = null;
 
 function loadConfig() {
   if (!ghToken || ghToken === '__GH_DISPATCH_TOKEN__') {
@@ -339,39 +284,6 @@ function toast(msg, type = '', dur = 3500) {
   el.className = `toast show ${type}`;
   if (dur) toastT = setTimeout(() => el.classList.remove('show'), dur);
 }
-
-function setStatus(type, title, sub) {
-  const emojis = { in:'⚡', out:'🏢', sos:'🚨' };
-  document.getElementById('s-dot').className     = 's-dot ' + (type === 'in' ? 'in' : type === 'sos' ? 'emergency' : '');
-  document.getElementById('status').className    = 'status ' + (type === 'in' ? 's-in' : type === 'sos' ? 's-emergency' : '');
-  document.getElementById('s-emoji').textContent = emojis[type] || '🏢';
-  document.getElementById('s-title').textContent = title;
-  document.getElementById('s-sub').textContent   = sub;
-}
-
-function addEntry(type, person, detail) {
-  entries.unshift({ type, name: person, detail, time: hms(), loc: CFG.locations[loc].label });
-  renderLog();
-}
-
-function renderLog() {
-  const el = document.getElementById('log');
-  if (!entries.length) { el.innerHTML = '<p class="log-empty">No activity yet today</p>'; return; }
-  const bc = { in:'b-in', out:'b-out', sos:'b-sos' };
-  const bl = { in:'IN', out:'OUT', sos:'SOS' };
-  el.innerHTML = entries.slice(0, 20).map(e =>
-    `<div class="log-row">
-      <span class="badge ${bc[e.type]}">${bl[e.type]}</span>
-      <div class="log-body">
-        <div class="log-who">${e.name}</div>
-        <div class="log-sub">${e.detail} · ${e.loc}</div>
-      </div>
-      <div class="log-time">${e.time}</div>
-    </div>`
-  ).join('');
-}
-
-function clearLog() { entries = []; renderLog(); }
 
 function setLoading(id, on) {
   document.getElementById(id).classList.toggle('loading', on);
@@ -411,8 +323,6 @@ async function doIn() {
   const { label, flag } = CFG.locations[loc];
   const ts = fullTs();
   setLoading('btn-in', true);
-  setStatus('in', `${n} is in the lab`, `${label} · ${hms()}`);
-  addEntry('in', n, ts);
   const ok = await dispatch(`${flag} *${n}* checked in to *${label}*\n🕐 ${ts}`);
   setLoading('btn-in', false);
   toast(ok ? '✓ Queued — Slack message in ~30s' : '✗ Dispatch failed — check token', ok ? 'ok' : 'err');
@@ -424,8 +334,6 @@ async function doOut() {
   const { label, flag } = CFG.locations[loc];
   const ts = fullTs();
   setLoading('btn-out', true);
-  setStatus('out', 'Lab is empty', `${n} left ${label} at ${hms()}`);
-  addEntry('out', n, ts);
   const ok = await dispatch(`🚪 *${n}* checked out of *${label}*\n🕐 ${ts}`);
   setLoading('btn-out', false);
   toast(ok ? '✓ Queued — Slack message in ~30s' : '✗ Dispatch failed — check token', ok ? 'ok' : 'err');
@@ -436,8 +344,6 @@ async function doSOS() {
   const { label } = CFG.locations[loc];
   const ts = fullTs();
   setLoading('btn-sos', true);
-  setStatus('sos', '🚨 Emergency alert sent', `${label} · ${hms()}`);
-  addEntry('sos', n, ts);
   toast('🚨 Alerting team — Slack message in ~30s', 'err', 0);
   const ok = await dispatch(`*${n}* triggered an emergency at *${label}*\n🕐 ${ts}`, true);
   setLoading('btn-sos', false);
@@ -446,7 +352,6 @@ async function doSOS() {
 
 // Boot
 loadConfig();
-renderLog();
 </script>
 </body>
 </html>

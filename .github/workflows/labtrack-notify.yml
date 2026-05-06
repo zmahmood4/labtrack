@@ -4,8 +4,6 @@ on:
   repository_dispatch:
     types: [labtrack-event]
 
-# Only allow this workflow to run from the main branch
-# and restrict what it can do
 permissions:
   contents: read
 
@@ -13,7 +11,7 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Slack message
+      - name: Send Slack message to both channels
         run: |
           TEXT='${{ github.event.client_payload.text }}'
           EMERGENCY='${{ github.event.client_payload.emergency }}'
@@ -27,7 +25,16 @@ jobs:
             EMOJI=":zap:"
           fi
 
-          curl -s -o /dev/null -w "%{http_code}" -X POST \
+          PAYLOAD="{\"text\": \"${MESSAGE}\", \"username\": \"ev.energy LabTrack\", \"icon_emoji\": \"${EMOJI}\"}"
+
+          # Post to lab-presence channel
+          curl -s -o /dev/null -X POST \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \"${MESSAGE}\", \"username\": \"ev.energy LabTrack\", \"icon_emoji\": \"${EMOJI}\"}" \
+            -d "$PAYLOAD" \
             "${{ secrets.SLACK_WEBHOOK }}"
+
+          # Post to hardware-connectivity channel
+          curl -s -o /dev/null -X POST \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD" \
+            "${{ secrets.SLACK_WEBHOOK_HARDWARE }}"
