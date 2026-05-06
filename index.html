@@ -222,10 +222,8 @@
 
   <!-- Config error -->
   <div class="config-err" id="config-err">
-    ⚠ <strong>config.json not found.</strong><br>
-    Create a <code>config.json</code> file next to index.html with:<br>
-    <code>{ "gh_token": "your_pat_here" }</code><br>
-    This file is gitignored and never committed.
+    ⚠ <strong>Token not injected.</strong> The deploy workflow hasn't run yet, or the <code>GH_DISPATCH_TOKEN</code> secret is missing.<br>
+    Go to your repo → <strong>Settings → Secrets → Actions</strong> → add <code>GH_DISPATCH_TOKEN</code>, then push any change to trigger a redeploy.
   </div>
 
   <!-- Status -->
@@ -297,54 +295,30 @@
 
 <script>
 // ─────────────────────────────────────────────────────────────────
-//  These values are safe to commit — no secrets here
+//  Safe to commit. Token injected at build time by deploy.yml
+//  using the GH_DISPATCH_TOKEN repo secret — never in source.
 // ─────────────────────────────────────────────────────────────────
 const CFG = {
   gh_user:        'zmahmood4',
   gh_repo:        'labtrack',
-  manager_handle: '@your-manager',   // Slack handle pinged on emergency
+  manager_handle: '@your-manager',
   locations: {
     luton:   { label: 'Luton Lab',    flag: '🇬🇧' },
     newyork: { label: 'New York Lab', flag: '🇺🇸' },
   }
 };
-// ─────────────────────────────────────────────────────────────────
-//  gh_token is loaded at runtime from config.json (gitignored)
-//  config.json format:  { "gh_token": "ghp_xxxx..." }
-//
-//  To create a token:
-//    github.com/settings/tokens/new
-//    → Note: LabTrack
-//    → Expiry: 90 days (or no expiry)
-//    → Scope: repo
-//    → Generate and paste into config.json
-//
-//  config.json lives next to index.html on your device only.
-//  It is in .gitignore and will never be committed.
-// ─────────────────────────────────────────────────────────────────
 
-let ghToken = null;
+// Replaced by deploy.yml via sed — do not edit this line
+const ghToken = '__GH_DISPATCH_TOKEN__';
+
 let loc     = 'luton';
 let entries = [];
 let toastT  = null;
 
-// Load token from config.json on startup
-async function loadConfig() {
-  try {
-    const res = await fetch('./config.json');
-    if (!res.ok) throw new Error('not found');
-    const data = await res.json();
-    ghToken = data.gh_token || null;
-    if (!ghToken || ghToken === 'YOUR_GITHUB_PAT_HERE') {
-      showConfigErr();
-    }
-  } catch {
-    showConfigErr();
+function loadConfig() {
+  if (!ghToken || ghToken === '__GH_DISPATCH_TOKEN__') {
+    document.getElementById('config-err').classList.add('show');
   }
-}
-
-function showConfigErr() {
-  document.getElementById('config-err').classList.add('show');
 }
 
 function setLoc(l) {
@@ -405,7 +379,7 @@ function setLoading(id, on) {
 
 async function dispatch(text, emergency = false) {
   if (!ghToken) {
-    toast('⚠ No token — check config.json', 'warn', 5000);
+    toast('⚠ Token not injected — check deploy.yml ran successfully', 'warn', 5000);
     return false;
   }
   try {
