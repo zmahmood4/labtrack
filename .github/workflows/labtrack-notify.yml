@@ -1,0 +1,33 @@
+name: LabTrack Slack Notify
+
+on:
+  repository_dispatch:
+    types: [labtrack-event]
+
+# Only allow this workflow to run from the main branch
+# and restrict what it can do
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack message
+        run: |
+          TEXT='${{ github.event.client_payload.text }}'
+          EMERGENCY='${{ github.event.client_payload.emergency }}'
+          MANAGER='${{ secrets.MANAGER_HANDLE }}'
+
+          if [ "$EMERGENCY" = "true" ]; then
+            MESSAGE="🚨 *EMERGENCY ALERT*\n${TEXT}\n${MANAGER} please respond immediately."
+            EMOJI=":rotating_light:"
+          else
+            MESSAGE="${TEXT}"
+            EMOJI=":zap:"
+          fi
+
+          curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"${MESSAGE}\", \"username\": \"ev.energy LabTrack\", \"icon_emoji\": \"${EMOJI}\"}" \
+            "${{ secrets.SLACK_WEBHOOK }}"

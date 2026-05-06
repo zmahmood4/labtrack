@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0d0d0d" />
+<title>ev.energy · LabTrack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d0d0d;
+    --surface:   #181818;
+    --surface2:  #222222;
+    --border:    rgba(255,255,255,0.07);
+    --border-md: rgba(255,255,255,0.13);
+    --text:      #f0f0ee;
+    --muted:     #888884;
+    --faint:     #4a4a47;
+    --green:     #b4f542;
+    --green-dim: rgba(180,245,66,0.10);
+    --green-rim: rgba(180,245,66,0.28);
+    --red:       #f55050;
+    --red-dim:   rgba(245,80,80,0.10);
+    --red-rim:   rgba(245,80,80,0.30);
+    --r:         14px;
+    --r-sm:      9px;
+  }
+
+  html, body {
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: max(env(safe-area-inset-top), 20px) 18px max(env(safe-area-inset-bottom), 28px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 100dvh;
+  }
+
+  /* ── Header ── */
+  .hdr { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 4px; }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .brand-mark {
+    width: 34px; height: 34px; background: var(--green);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .brand-mark svg { width: 18px; height: 18px; display: block; }
+  .brand-name { font-size: 16px; font-weight: 600; letter-spacing: -0.2px; }
+  .brand-name b  { color: var(--green); }
+  .brand-name em { color: var(--muted); font-style: normal; font-weight: 400; }
+  .pill {
+    font-size: 11px; font-weight: 500; color: var(--muted);
+    background: var(--surface); border: 0.5px solid var(--border-md);
+    border-radius: 20px; padding: 4px 10px;
+  }
+
+  /* ── Status ── */
+  .status {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--r); padding: 15px 16px;
+    display: flex; align-items: center; gap: 13px;
+    transition: border-color 0.25s;
+  }
+  .status.s-in        { border-color: var(--green-rim); }
+  .status.s-emergency { border-color: var(--red-rim); }
+  .s-dot {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0; transition: background 0.25s;
+  }
+  .s-dot.in        { background: var(--green-dim); }
+  .s-dot.emergency { background: var(--red-dim); }
+  .s-text h3 { font-size: 14px; font-weight: 600; }
+  .s-text p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--r); padding: 15px 16px;
+  }
+  .card-label {
+    font-size: 10px; font-weight: 600; color: var(--faint);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px;
+  }
+
+  /* ── Location tabs ── */
+  .loc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .loc-btn {
+    padding: 10px 12px; border-radius: var(--r-sm);
+    border: 0.5px solid var(--border-md); background: var(--surface2);
+    color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 1px;
+    transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+  }
+  .loc-btn:active { transform: scale(0.97); }
+  .loc-btn.active { background: var(--green-dim); border-color: var(--green-rim); color: var(--green); }
+  .loc-btn .ln { font-size: 13px; font-weight: 600; }
+  .loc-btn .ls { font-size: 11px; opacity: 0.65; }
+
+  /* ── Name input ── */
+  .name-inp {
+    width: 100%; background: var(--surface2);
+    border: 0.5px solid var(--border-md); border-radius: var(--r-sm);
+    color: var(--text); font-family: inherit; font-size: 16px; font-weight: 500;
+    padding: 13px 14px; -webkit-appearance: none; transition: border-color 0.15s;
+  }
+  .name-inp::placeholder { color: var(--faint); }
+  .name-inp:focus { outline: none; border-color: var(--green-rim); }
+
+  /* ── Buttons ── */
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn {
+    padding: 15px 12px; border-radius: var(--r);
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    transition: transform 0.1s, opacity 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active  { transform: scale(0.96); }
+  .btn.loading { opacity: 0.45; pointer-events: none; }
+  .bi { font-size: 22px; }
+  .bl { font-size: 12px; font-weight: 600; }
+  .bs { font-size: 11px; font-weight: 400; opacity: 0.65; }
+
+  .btn-in  { background: var(--green); color: #0d0d0d; }
+  .btn-out { background: var(--surface); color: var(--text); border: 0.5px solid var(--border-md); }
+  .btn-sos {
+    grid-column: 1 / -1;
+    background: var(--red-dim); color: var(--red);
+    border: 1px solid var(--red-rim);
+    flex-direction: row; padding: 15px 20px; justify-content: center; gap: 10px;
+  }
+  .btn-sos .bi { font-size: 18px; }
+
+  /* ── Config error banner ── */
+  .config-err {
+    background: rgba(245,166,35,0.08);
+    border: 0.5px solid rgba(245,166,35,0.3);
+    border-radius: var(--r);
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #f5a623;
+    line-height: 1.6;
+    display: none;
+  }
+  .config-err.show { display: block; }
+  .config-err code {
+    background: rgba(245,166,35,0.15);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+  }
+
+  /* ── Log ── */
+  .log-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .log-clear { font-size: 11px; color: var(--faint); cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
+  .log-clear:hover { color: var(--muted); }
+  .log-empty { font-size: 13px; color: var(--faint); }
+  .log-row { display: flex; align-items: flex-start; gap: 9px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .log-row:last-child { border-bottom: none; }
+  .badge { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+  .b-in  { background: var(--green-dim); color: var(--green); }
+  .b-out { background: var(--surface2);  color: var(--muted); }
+  .b-sos { background: var(--red-dim);   color: var(--red); }
+  .log-body { flex: 1; min-width: 0; }
+  .log-who  { font-size: 13px; font-weight: 600; }
+  .log-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log-time { font-size: 11px; color: var(--faint); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: calc(max(env(safe-area-inset-bottom), 16px) + 10px);
+    left: 50%; transform: translateX(-50%) translateY(12px);
+    background: var(--surface2); border: 0.5px solid var(--border-md);
+    border-radius: 40px; padding: 10px 18px;
+    font-size: 13px; font-weight: 500; color: var(--text);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.22s;
+    z-index: 99; max-width: calc(100vw - 36px); text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.ok   { color: var(--green); border-color: var(--green-rim); }
+  .toast.err  { color: var(--red);   border-color: var(--red-rim); }
+  .toast.warn { color: #f5a623;      border-color: rgba(245,166,35,0.3); }
+
+  .delay-note { font-size: 11px; color: var(--faint); text-align: center; line-height: 1.5; }
+  .footer     { text-align: center; font-size: 11px; color: var(--faint); padding: 2px 0 6px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10.5 1.5L3.5 10H9L7.5 16.5L14.5 8H9L10.5 1.5Z"
+                fill="#0d0d0d" stroke="#0d0d0d" stroke-width="0.4" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="brand-name">ev<b>.</b>energy <em>LabTrack</em></span>
+    </div>
+    <div class="pill" id="hdr-loc">Luton Lab</div>
+  </div>
+
+  <!-- Config error -->
+  <div class="config-err" id="config-err">
+    ⚠ <strong>config.json not found.</strong><br>
+    Create a <code>config.json</code> file next to index.html with:<br>
+    <code>{ "gh_token": "your_pat_here" }</code><br>
+    This file is gitignored and never committed.
+  </div>
+
+  <!-- Status -->
+  <div class="status" id="status">
+    <div class="s-dot" id="s-dot"><span id="s-emoji">🏢</span></div>
+    <div class="s-text">
+      <h3 id="s-title">No one checked in</h3>
+      <p  id="s-sub">Select location, enter your name, tap check in</p>
+    </div>
+  </div>
+
+  <!-- Location -->
+  <div class="card">
+    <div class="card-label">Lab location</div>
+    <div class="loc-grid">
+      <button class="loc-btn active" id="tab-luton" onclick="setLoc('luton')">
+        <span class="ln">🇬🇧 Luton Lab</span>
+        <span class="ls">Luton, UK</span>
+      </button>
+      <button class="loc-btn" id="tab-newyork" onclick="setLoc('newyork')">
+        <span class="ln">🇺🇸 New York Lab</span>
+        <span class="ls">New York, US</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Name -->
+  <div class="card">
+    <label class="card-label" for="name-inp">Your name</label>
+    <input class="name-inp" id="name-inp" type="text"
+           placeholder="First name"
+           autocomplete="given-name" autocorrect="off"
+           autocapitalize="words" spellcheck="false" maxlength="40" />
+  </div>
+
+  <!-- Actions -->
+  <div class="btn-grid">
+    <button class="btn btn-in"  id="btn-in"  onclick="doIn()">
+      <span class="bi">⚡</span>
+      <span class="bl">Check in</span>
+      <span class="bs">I'm at the lab</span>
+    </button>
+    <button class="btn btn-out" id="btn-out" onclick="doOut()">
+      <span class="bi">🚪</span>
+      <span class="bl">Check out</span>
+      <span class="bs">I'm leaving</span>
+    </button>
+    <button class="btn btn-sos" id="btn-sos" onclick="doSOS()">
+      <span class="bi">🚨</span>
+      <span class="bl">Emergency — alert team now</span>
+    </button>
+  </div>
+
+  <p class="delay-note">⏱ Slack messages arrive ~30–60s after action via GitHub Actions</p>
+
+  <!-- Log -->
+  <div class="card" style="flex:1">
+    <div class="log-hdr">
+      <div class="card-label" style="margin:0">Today's log</div>
+      <button class="log-clear" onclick="clearLog()">Clear</button>
+    </div>
+    <div id="log"><p class="log-empty">No activity yet today</p></div>
+  </div>
+
+  <div class="footer">ev.energy lab safety system</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+//  These values are safe to commit — no secrets here
+// ─────────────────────────────────────────────────────────────────
+const CFG = {
+  gh_user:        'zmahmood4',
+  gh_repo:        'labtrack',
+  manager_handle: '@your-manager',   // Slack handle pinged on emergency
+  locations: {
+    luton:   { label: 'Luton Lab',    flag: '🇬🇧' },
+    newyork: { label: 'New York Lab', flag: '🇺🇸' },
+  }
+};
+// ─────────────────────────────────────────────────────────────────
+//  gh_token is loaded at runtime from config.json (gitignored)
+//  config.json format:  { "gh_token": "ghp_xxxx..." }
+//
+//  To create a token:
+//    github.com/settings/tokens/new
+//    → Note: LabTrack
+//    → Expiry: 90 days (or no expiry)
+//    → Scope: repo
+//    → Generate and paste into config.json
+//
+//  config.json lives next to index.html on your device only.
+//  It is in .gitignore and will never be committed.
+// ─────────────────────────────────────────────────────────────────
+
+let ghToken = null;
+let loc     = 'luton';
+let entries = [];
+let toastT  = null;
+
+// Load token from config.json on startup
+async function loadConfig() {
+  try {
+    const res = await fetch('./config.json');
+    if (!res.ok) throw new Error('not found');
+    const data = await res.json();
+    ghToken = data.gh_token || null;
+    if (!ghToken || ghToken === 'YOUR_GITHUB_PAT_HERE') {
+      showConfigErr();
+    }
+  } catch {
+    showConfigErr();
+  }
+}
+
+function showConfigErr() {
+  document.getElementById('config-err').classList.add('show');
+}
+
+function setLoc(l) {
+  loc = l;
+  document.getElementById('tab-luton').classList.toggle('active', l === 'luton');
+  document.getElementById('tab-newyork').classList.toggle('active', l === 'newyork');
+  document.getElementById('hdr-loc').textContent = CFG.locations[l].label;
+}
+
+const getName = () => document.getElementById('name-inp').value.trim();
+const hms     = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const fullTs  = () => new Date().toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+
+function toast(msg, type = '', dur = 3500) {
+  if (toastT) clearTimeout(toastT);
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  if (dur) toastT = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function setStatus(type, title, sub) {
+  const emojis = { in:'⚡', out:'🏢', sos:'🚨' };
+  document.getElementById('s-dot').className     = 's-dot ' + (type === 'in' ? 'in' : type === 'sos' ? 'emergency' : '');
+  document.getElementById('status').className    = 'status ' + (type === 'in' ? 's-in' : type === 'sos' ? 's-emergency' : '');
+  document.getElementById('s-emoji').textContent = emojis[type] || '🏢';
+  document.getElementById('s-title').textContent = title;
+  document.getElementById('s-sub').textContent   = sub;
+}
+
+function addEntry(type, person, detail) {
+  entries.unshift({ type, name: person, detail, time: hms(), loc: CFG.locations[loc].label });
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById('log');
+  if (!entries.length) { el.innerHTML = '<p class="log-empty">No activity yet today</p>'; return; }
+  const bc = { in:'b-in', out:'b-out', sos:'b-sos' };
+  const bl = { in:'IN', out:'OUT', sos:'SOS' };
+  el.innerHTML = entries.slice(0, 20).map(e =>
+    `<div class="log-row">
+      <span class="badge ${bc[e.type]}">${bl[e.type]}</span>
+      <div class="log-body">
+        <div class="log-who">${e.name}</div>
+        <div class="log-sub">${e.detail} · ${e.loc}</div>
+      </div>
+      <div class="log-time">${e.time}</div>
+    </div>`
+  ).join('');
+}
+
+function clearLog() { entries = []; renderLog(); }
+
+function setLoading(id, on) {
+  document.getElementById(id).classList.toggle('loading', on);
+}
+
+async function dispatch(text, emergency = false) {
+  if (!ghToken) {
+    toast('⚠ No token — check config.json', 'warn', 5000);
+    return false;
+  }
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${CFG.gh_user}/${CFG.gh_repo}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Accept':               'application/vnd.github+json',
+          'Authorization':        `Bearer ${ghToken}`,
+          'Content-Type':         'application/json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: JSON.stringify({
+          event_type: 'labtrack-event',
+          client_payload: { text, emergency, manager: CFG.manager_handle }
+        })
+      }
+    );
+    return res.status === 204;
+  } catch {
+    return false;
+  }
+}
+
+async function doIn() {
+  const n = getName();
+  if (!n) { toast('Enter your name first', 'err'); return; }
+  const { label, flag } = CFG.locations[loc];
+  const ts = fullTs();
+  setLoading('btn-in', true);
+  setStatus('in', `${n} is in the lab`, `${label} · ${hms()}`);
+  addEntry('in', n, ts);
+  const ok = await dispatch(`${flag} *${n}* checked in to *${label}*\n🕐 ${ts}`);
+  setLoading('btn-in', false);
+  toast(ok ? '✓ Queued — Slack message in ~30s' : '✗ Dispatch failed — check token', ok ? 'ok' : 'err');
+}
+
+async function doOut() {
+  const n = getName();
+  if (!n) { toast('Enter your name first', 'err'); return; }
+  const { label, flag } = CFG.locations[loc];
+  const ts = fullTs();
+  setLoading('btn-out', true);
+  setStatus('out', 'Lab is empty', `${n} left ${label} at ${hms()}`);
+  addEntry('out', n, ts);
+  const ok = await dispatch(`🚪 *${n}* checked out of *${label}*\n🕐 ${ts}`);
+  setLoading('btn-out', false);
+  toast(ok ? '✓ Queued — Slack message in ~30s' : '✗ Dispatch failed — check token', ok ? 'ok' : 'err');
+}
+
+async function doSOS() {
+  const n = getName() || 'Someone';
+  const { label } = CFG.locations[loc];
+  const ts = fullTs();
+  setLoading('btn-sos', true);
+  setStatus('sos', '🚨 Emergency alert sent', `${label} · ${hms()}`);
+  addEntry('sos', n, ts);
+  toast('🚨 Alerting team — Slack message in ~30s', 'err', 0);
+  const ok = await dispatch(`*${n}* triggered an emergency at *${label}*\n🕐 ${ts}`, true);
+  setLoading('btn-sos', false);
+  if (!ok) toast('✗ Dispatch failed — check token', 'err');
+}
+
+// Boot
+loadConfig();
+renderLog();
+</script>
+</body>
+</html>
